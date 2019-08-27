@@ -21,6 +21,9 @@ AFF4Status ExtractStream(
     std::string filename,
     bool truncate) {
 
+    resolver.logger->trace("Entry in ExtractStream(input_urn={}, filename={}, truncate={})", 
+            input_urn, filename, truncate ? "true" : "false");
+		
     AFF4Flusher<AFF4Stream> in_stream;
     AFF4Flusher<FileBackedObject> out_stream;
 
@@ -88,6 +91,8 @@ bool VolumeManager::MaybeSwitchVolumes() {
 
 
 AFF4Status BasicImager::Run(int argc, char** argv)  {
+    resolver.logger->trace("Entry in BasicImager::Run()");
+    
     AFF4Status res = Initialize();
     if (res != STATUS_OK) {
         return res;
@@ -113,10 +118,13 @@ AFF4Status BasicImager::Run(int argc, char** argv)  {
         res = ProcessArgs();
     }
 
+    resolver.logger->trace("Exit from BasicImager::Run(): {}", res);
     return res;
 }
 
 AFF4Status BasicImager::ParseArgs() {
+    resolver.logger->trace("Entry in BasicImager::ParseArgs()");
+    
     AFF4Status result = handle_logging();
 
     if (Get("threads")->isSet()) {
@@ -152,10 +160,13 @@ AFF4Status BasicImager::ParseArgs() {
                               max_output_volume_file_size);
     }
 
+    resolver.logger->trace("Exit from BasicImager::ParseArgs(): {}", result);
     return result;
 }
 
 AFF4Status BasicImager::ProcessArgs() {
+    resolver.logger->trace("Entry in BasicImager::ProcessArgs()");
+
     AFF4Status result = CONTINUE;
 
     if (Get("list")->isSet()) {
@@ -174,6 +185,7 @@ AFF4Status BasicImager::ProcessArgs() {
         result = process_input();
     }
 
+    resolver.logger->trace("Exit from BasicImager::ParseArgs(): {}", result);
     return result;
 }
 
@@ -221,6 +233,8 @@ AFF4Status BasicImager::handle_logging() {
 }
 
 AFF4Status BasicImager::handle_aff4_volumes() {
+    resolver.logger->trace("Entry in BasicImager::handle_aff4_volumes()");
+    
     auto volumes = GetArg<TCLAP::UnlabeledMultiArg<std::string>>(
         "aff4_volumes")->getValue();
 
@@ -391,6 +405,8 @@ AFF4Status BasicImager::process_input() {
 }
 
 AFF4Status BasicImager::handle_export() {
+    resolver.logger->trace("Entry in BasicImager::handle_export()");
+    
     if (Get("output")->isSet()) {
         resolver.logger->error(
             "Cannot specify an export and an output volume at the same time "
@@ -415,10 +431,13 @@ AFF4Status BasicImager::handle_export() {
     } else {
         // These are all acceptable stream types.
         for (const URN image_type : std::vector<URN>{
-                URN(AFF4_IMAGE_TYPE),
-                    URN(AFF4_MAP_TYPE)
-                    }) {
+                URN(AFF4_IMAGE_TYPE), URN(AFF4_MAP_TYPE), URN(AFF4_IMAGESTREAM_TYPE)}) {
+            resolver.logger->trace("Looking for {} matches", image_type);
+            
             for (const URN& image: resolver.Query(AFF4_TYPE, &image_type)) {
+                resolver.logger->trace("Looking for match {} - {}", 
+                        export_pattern.c_str(), image);
+                
                 if (aff4::fnmatch(
                         export_pattern.c_str(),
                         image.SerializeToString().c_str()) == 0) {
